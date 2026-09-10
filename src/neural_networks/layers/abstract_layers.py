@@ -17,27 +17,58 @@ class Layer(ABC):
         self.train: bool = True # インスタンス時には学習モード
     
     @abstractmethod
-    def forward_propagation(self): ...
+    def forward_propagation(self, x: np.ndarray) -> np.ndarray: ...
     
     @abstractmethod
-    def backward_propagation(self): ...
+    def backward_propagation(self, dout: np.ndarray) -> np.ndarray: ...
     
     
     
 class ParametricLayer(Layer):
     """
-    パラメータを要求するレイヤーを定義するための抽象クラス
-    ここでパラメータとは、誤差逆伝播法により更新されるものをいう。
+    重み行列Wおよびバイアスベクトルbによって構成されるレイヤーを定義するための抽象クラス
     
-    さらにパラメータ初期化メソッドをここで定義しておく
-    パラメータ初期化メソッドにおいてはn_inとn_outが必要になるが、これはレイヤーの種類により計算方法が異なるので、計算方法のみ抽象化する。
-    プロパティは以下のように定義する。
+    W, bの初期化を行う関数を共通でここで定義する。
+    
+    インスタンス化には以下の2つを要求する。
+    shape: 重み行列の形状
+    args: レイヤーの詳細を決定するのに必要な情報を格納した辞書
+    
+    args引数については、共通して以下の形式を要求する
+    {
+    "weight_init_method": {
+        "method_name": 初期化方法("Standard" / "Xavier" / "He")
+        "distribution": 初期化に用いる分布("normal" / "uniform")
+        "sigma": [初期化方法がStandardで分布がnormalの場合のみ]標準偏差
+        "r": [初期化方法がStandardで分布がuniformの場合のみ]一様分布の範囲
+        }
+        
+    "bias_init_method": {
+        "method_name": 初期化方法("Zeros")
+        }
+    }
+    拡張性のためにこのようにしてある。
+    他は、レイヤーごとに追加する。
+    
+    以下のプロパティを持つ
+    shape: インスタンス化時に与えられたもの
+    args: インスタンス化時に与えられたもの
+    W: 重み行列
+    b: バイアスベクトル
+    dW: 誤差逆伝播時の重み行列による誤差
+    db: 誤差逆伝播時のバイアスベクトルによる誤差
+    n_in: 順伝播時に出力側の1ノードを計算するために寄与する入力要素の総数。抽象プロパティ
+    n_out: 逆伝播時に入力側の1ノードを計算するために寄与する出力要素の総数。抽象プロパティ
+    b_shape: バイアスベクトルの形状。抽象プロパティ
+    
+    n_in, n_out, n_shapeの3つのプロパティの実装が必要。
     """
-    shape: tuple # 形状を決定するのに必要な情報。インスタンス化時に与える。
-    initial_method: str # 初期化方法 Standard / Xavier / Heのいずれか。インスタンス化時に与える。
-    args: dict # 初期化分布あるいはレイヤーの詳細を決定するのに必要な情報。インスタンス化時に与える。
-               # argsは、initial_method = standardだった場合にのみ、一様分布あるいは正規分布を決定するために必要な引数(それぞれr, sigma)を持つ
-    params: np.ndarray # パラメータ
+    shape: tuple
+    args: dict
+    W: np.ndarray
+    b: np.ndarray
+    dW: np.ndarray
+    db: np.ndarray
 
     # 順伝播時に出力側の1ノードを計算するために寄与する入力要素の総数
     @property
@@ -49,60 +80,79 @@ class ParametricLayer(Layer):
     @abstractmethod
     def n_out(self) -> int: ...
     
-    def __init__(self, shape: tuple, initial_method: str, args: dict):
+    # バイアスベクトルの形状
+    @property
+    @abstractmethod
+    def b_shape(self) -> tuple: ...
+    
+    def __init__(self, shape: tuple, args: dict):
         super().__init__()
         self.shape: tuple = shape
-        self.initial_method: str = initial_method
         self.args: dict = args
-        self.params: np.ndarray = self.param_init()
+        self.W: np.ndarray = self.weight_init()
+        self.b: np.ndarray = self.bias_init()
     
-    def param_init(self) -> np.ndarray:
+    
+    def weight_init(self) -> np.ndarray:
         """
-        パラメータ初期化方法として
+        Wの初期化方法として
         Standard-random-initialization / Xavier-initialization / He-initialization
         の3つを共通メソッドとして実装する。
-        これらはmethod引数によって指定される。
+        これらはself.args["weight_init_method"]["method_name"]によって指定されることが要求される。
         それぞれ Standard / Xavier / He が対応する。
         
         これらの違いは、正規分布あるいは一様分布を決定するためのパラメータのみなので、
-        まず初期化方法ごとに分布を決めるパラメータを計算したのちに、初期化されたndarrayを返却するように実装する。
+        まず初期化方法ごとに分布を決めるパラメータを計算したのちに、それぞれの方法で初期化されたndarrayを返却するように実装する。
         """
         
+        init_name: str = self.args["weight_init_method"]["method_name"]
+        distribution: str = self.args["weight_init_method"]["distribution"]
+        
         # 書いてから気づいたがもっといい実装があった。アルゴリズムはこっちの方がわかりやすいと思うのでこのままにする。
-        if self.initial_method == "Standard":
-            if self.args["distribution"] == "normal" and self.args["sigma"] >= 0:
+        if init_name == "Standard":
+            if distribution == "normal" and self.args["weight_init_method"]["sigma"] >= 0:
                 mean = 0
-                sigma = self.args["sigma"]
-            elif self.args["distribution"] == "uniform" and self.args["r"] >= 0:
-                low = - self.args["r"]
-                high = self.args["r"]
+                sigma = self.args["weight_init_method"]["sigma"]
+            elif distribution == "uniform" and self.args["weight_init_method"]["r"] >= 0:
+                low = - self.args["weight_init_method"]["r"]
+                high = self.args["weight_init_method"]["r"]
             else:
-                raise ParameterInitializeMethodError("Standard初期化におけるargsの形式が不正")
+                raise ParameterInitializeMethodError("WのStandard初期化におけるargsの形式が不正")
             
-        elif self.initial_method == "Xavier":
-            if self.args["distribution"] == "normal":
+        elif init_name == "Xavier":
+            if distribution == "normal":
                 mean = 0
                 sigma = sqrt(2 / (self.n_in + self.n_out)) # 一回平方根にするの無駄だけど統一性のため
-            elif self.args["distribution"] == "uniform":
+            elif distribution == "uniform":
                 low = - sqrt(6 / (self.n_in + self.n_out))
                 high = sqrt(6 / (self.n_in + self.n_out))
             else:
-                raise ParameterInitializeMethodError("Xavier初期化におけるargsの形式が不正")
+                raise ParameterInitializeMethodError("WのXavier初期化におけるargsの形式が不正")
         
-        elif self.initial_method == "He":
-            if self.args["distribution"] == "normal":
+        elif init_name == "He":
+            if distribution == "normal":
                 mean = 0
                 sigma = sqrt(2 / self.n_in) # 一回平方根にするの無駄だけど統一性のため
-            elif self.args["distribution"] == "uniform":
+            elif distribution == "uniform":
                 low = - sqrt(6 / self.n_in)
                 high = sqrt(6 / self.n_in)
             else:
-                raise ParameterInitializeMethodError("He初期化におけるargsの形式が不正")
+                raise ParameterInitializeMethodError("WのHe初期化におけるargsの形式が不正")
         
         else:
-            raise ParameterInitializeMethodError("初期化方法がStandard / Xavier / Heのどれでもない")
+            raise ParameterInitializeMethodError("Wの初期化方法がStandard / Xavier / Heのどれでもない")
         
         rng = np.random.default_rng(seed=42)
-        if self.args["distribution"] == "normal": return rng.normal(loc=mean, scale=sigma**2, size=self.shape)
-        elif self.args["distribution"] == "uniform": return rng.uniform(low=low, high=high, size=self.shape)
+        if distribution == "normal": return rng.normal(loc=mean, scale=sigma**2, size=self.shape)
+        elif distribution == "uniform": return rng.uniform(low=low, high=high, size=self.shape)
         else: raise ParameterInitializeMethodError("通常ありえない箇所でのエラー")
+
+    
+    def bias_init(self) -> np.ndarray:
+        init_name: str = self.args["bias_initial_method"]["method_name"]
+        
+        if init_name == "Zeros":
+            return np.zeros(self.b_shape)
+
+        else:
+            raise ParameterInitializeMethodError("bの初期化方法がZerosではない")
