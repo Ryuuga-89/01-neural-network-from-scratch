@@ -1,7 +1,6 @@
 import numpy as np
 
-from src.neural_networks.layers.abstract_layers import Layer, ParametricLayer
-
+from src.neural_networks.layers.abstract_layers import ParametricLayer
 
 
 class Linear(ParametricLayer):
