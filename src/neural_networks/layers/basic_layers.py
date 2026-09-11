@@ -97,4 +97,26 @@ class ReLU(Layer):
         0以下であった場合は勾配を0にする
         """
         return dout * self.mask
+
+
+class Sigmoid(Layer):
+    """
+    Sigmoid関数
+    
+    インスタンス化にあたっての引数は不要
+    """
+    out: np.ndarray # 出力。誤差逆伝播時の計算に必要。
+    
+    def __init__(self):
+        super().__init__()
+        
+    
+    def forward_propagation(self, x: np.ndarray) -> np.ndarray:
+        self.out = 1.0 / (1.0 + np.exp(x))
+        return self.out
+    
+    
+    def backward_propagation(self, dout: np.ndarray) -> np.ndarray:
+        return dout * self.out * (1.0 - self.out)
+    
     
