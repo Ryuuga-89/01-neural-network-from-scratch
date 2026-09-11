@@ -120,3 +120,23 @@ class Sigmoid(Layer):
         return dout * self.out * (1.0 - self.out)
     
     
+
+
+class Flatten(Layer):
+    """
+    結合層
+    """
+    x_shape: tuple # 入力されたものの形状。逆伝播時に使用。
+    
+    def __init__(self):
+        super().__init__()
+        
+    
+    def forward_propagation(self, x: np.ndarray) -> np.ndarray:
+        self.x_shape = x.shape
+        
+        return x.reshape(x.shape[0], -1)
+    
+    
+    def backward_propagation(self, dout: np.ndarray) -> np.ndarray:
+        return dout.reshape(self.x_shape)
