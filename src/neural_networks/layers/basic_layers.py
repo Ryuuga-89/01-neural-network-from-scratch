@@ -1,5 +1,3 @@
-from typing import Any
-
 import numpy as np
 
 from src.neural_networks.layers.abstract_layers import Layer, ParametricLayer
