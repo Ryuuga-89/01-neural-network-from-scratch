@@ -1,6 +1,8 @@
+from typing import Any
+
 import numpy as np
 
-from src.neural_networks.layers.abstract_layers import ParametricLayer
+from src.neural_networks.layers.abstract_layers import Layer, ParametricLayer
 
 
 class Linear(ParametricLayer):
@@ -65,3 +67,34 @@ class Linear(ParametricLayer):
         dx = dx_2d.reshape(*dout_shape[:-1], -1)
         
         return dx
+
+
+class ReLU(Layer):
+    """
+    ReLU関数
+    
+    インスタンス化にあたっての引数は不要
+    """
+    mask: np.ndarray # 0より大きいかどうかの真偽地を格納した行列
+    
+    
+    def __init__(self):
+        super().__init__()
+    
+    
+    def forward_propagation(self, x: np.ndarray) -> np.ndarray:
+        """
+        0より大きいかどうかを確認し、結果をmaskに格納する
+        maskとxのアダマール積が出力になる
+        """
+        self.mask = x > 0
+        return x * self.mask
+    
+    
+    def backward_propagation(self, dout: np.ndarray) -> np.ndarray:
+        """
+        順伝播時に0より大きかった場合は勾配をそのまま流し、
+        0以下であった場合は勾配を0にする
+        """
+        return dout * self.mask
+    
