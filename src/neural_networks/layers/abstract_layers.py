@@ -149,7 +149,7 @@ class ParametricLayer(Layer):
 
     
     def bias_init(self) -> np.ndarray:
-        init_name: str = self.args["bias_initial_method"]["method_name"]
+        init_name: str = self.args["bias_init_method"]["method_name"]
         
         if init_name == "Zeros":
             return np.zeros(self.b_shape)
