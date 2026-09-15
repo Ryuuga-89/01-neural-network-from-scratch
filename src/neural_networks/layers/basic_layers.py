@@ -39,9 +39,9 @@ class Linear(ParametricLayer):
         x_shape = x.shape # [B, C, n_in]など。次元数は2次元以上が要求。
         
         x_2d: np.ndarray = self.x.reshape(-1, self.n_in) # [X, n_in]の形に
-        ans: np.ndarray = x_2d @ self.W + self.b # [X, n_in] @ [n_in, n_out] + [n_out]
-        ans = ans.reshape(*x_shape[:-1], -1)
-        return ans
+        out: np.ndarray = x_2d @ self.W + self.b # [X, n_in] @ [n_in, n_out] + [n_out]
+        out = out.reshape(*x_shape[:-1], -1)
+        return out
     
     
     def backward_propagation(self, dout: np.ndarray) -> np.ndarray:
