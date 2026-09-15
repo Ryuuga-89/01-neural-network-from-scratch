@@ -205,3 +205,56 @@ class BatchNormalization(Layer):
         dx = dx1 + dx2
         
         return dx
+    
+    
+class Sequential(Layer):
+    """
+    層を順番にまとめるためのもの
+    全てのモデルはSequentialを用いて定義されるものとする
+    """
+    layers: list[Layer]
+    
+    
+    def __init__(self, layers: list[Layer]):
+        super().__init__()
+        
+        self.layers = layers
+        
+        
+    def forward_propagation(self, x: np.ndarray) -> np.ndarray:
+        """
+        全ての層の順伝播メソッドを通した上で、出力する
+        """
+        for layer in self.layers:
+            x = layer.forward_propagation(x)
+            
+        return x
+    
+    
+    def backward_propagation(self, dout: np.ndarray) -> np.ndarray:
+        """
+        全ての層の逆伝播メソッドを通した上で、出力する
+        出力の理由はないが、メソッド的な統一性のために出力することにする
+        """
+        for layer in reversed(self.layers):
+            dout = layer.backward_propagation(dout)
+            
+        return dout
+    
+    
+    def to_train(self) -> None:
+        """
+        全ての層のtrainプロパティをtrueにする
+        """
+        self.train = True
+        for layer in self.layers:
+            layer.train = True
+            
+    
+    def to_infer(self) -> None:
+        """
+        全ての層のtrainプロパティをfalseにする
+        """
+        self.train = False
+        for layer in self.layers:
+            layer.train = False
