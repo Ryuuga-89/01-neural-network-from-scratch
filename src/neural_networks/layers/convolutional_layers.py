@@ -1,6 +1,6 @@
-import numpy as np
-
 from typing import Literal
+
+import numpy as np
 
 from src.neural_networks.layers.abstract_layers import Layer, ParametricLayer
 
@@ -157,3 +157,151 @@ class Conv2D(ParametricLayer):
         return dx
     
     
+class MaxPooling2D(Layer):
+    """
+    二次元最大プーリング層
+    
+    shape = [Kh, Kw]
+    
+    argsの追加キー要件
+    {
+        ...
+        
+        "MaxPooling2D": {
+            stride: ストライド。int型
+            padding_mode: パディング方法。"Zeros" / "Edge" / "Reflect" / "Symmetric"
+            padding_length: パディングする長さ。int型
+        }
+    }
+    """
+    shape: tuple
+    args: dict
+    Kh: int
+    Kw: int
+    stride: int
+    padding_mode: str
+    padding_length: int
+    arg_max: np.ndarray
+    x_shape: tuple
+    
+    
+    def __init__(self, shape: tuple, args: dict):
+        super().__init__()
+        
+        self.shape = shape
+        self.args = args
+        self.Kh, self.Kw = self.shape
+        
+        self.stride = self.args["MaxPooling2D"]["stride"]
+        self.padding_mode = self.args["MaxPooling2D"]["padding_mode"]
+        self.padding_length = self.args["MaxPooling2D"]["padding_length"]
+
+
+    def im2col(self, im: np.ndarray) -> np.ndarray:
+        B, C, H, W = self.x_shape
+        H_out = (H + 2 * self.padding_length - self.Kh) // self.stride + 1
+        W_out = (W + 2 * self.padding_length - self.Kw) // self.stride + 1
+        
+        PADDING_MODE_TO_NP_PAD: dict = {"Zeros": "constant", "Edge": "edge", "Reflect": "reflect", "Symmetric": "symmetric"}
+        padding_mode_np_pad: Literal["constant", "edge", "reflect", "symmetric"] = PADDING_MODE_TO_NP_PAD[self.padding_mode]
+        
+        # Zerosパディングの場合、0埋めだと負の入力値に対して0が最大値として誤抽出されてしまうため -inf で埋める
+        if padding_mode_np_pad == "constant":
+            im_padded = np.pad(
+                im, 
+                pad_width=((0, 0), (0, 0), (self.padding_length, self.padding_length), (self.padding_length, self.padding_length)), 
+                mode="constant", 
+                constant_values=-np.inf
+            )
+        else:
+            im_padded = np.pad(
+                im, 
+                pad_width=((0, 0), (0, 0), (self.padding_length, self.padding_length), (self.padding_length, self.padding_length)), 
+                mode=padding_mode_np_pad
+            )
+            
+        col = np.zeros((B, C, self.Kh, self.Kw, H_out, W_out), dtype=im.dtype)
+        
+        for i in range(self.Kh):
+            i_max = i + self.stride * H_out
+            for j in range(self.Kw):
+                j_max = j + self.stride * W_out
+                col[:, :, i, j, :, :] = im_padded[:, :, i:i_max:self.stride, j:j_max:self.stride]
+        
+        col = col.transpose(0, 4, 5, 1, 2, 3)
+        col = col.reshape(B * H_out * W_out, -1)
+        
+        return col
+    
+    
+    def col2im(self, col: np.ndarray) -> np.ndarray:
+        """Conv2Dと完全に共通の処理"""
+        B, C, H, W = self.x_shape
+        H_out = (H + 2 * self.padding_length - self.Kh) // self.stride + 1
+        W_out = (W + 2 * self.padding_length - self.Kw) // self.stride + 1
+        
+        col = col.reshape(B, H_out, W_out, C, self.Kh, self.Kw)
+        col = col.transpose(0, 3, 4, 5, 1, 2)
+        
+        im_padded: np.ndarray = np.zeros((B, C, H + 2 * self.padding_length, W + 2 * self.padding_length), dtype=col.dtype)
+        
+        for i in range(self.Kh):
+            i_max = i + self.stride * H_out
+            for j in range(self.Kw):
+                j_max = j + self.stride * W_out
+                im_padded[:, :, i:i_max:self.stride, j:j_max:self.stride] += col[:, :, i, j, :, :]
+                
+        if self.padding_length == 0:
+            im = im_padded
+        else:
+            im = im_padded[:, :, self.padding_length:-self.padding_length, self.padding_length:-self.padding_length]
+        
+        return im
+
+
+    def forward_propagation(self, x: np.ndarray) -> np.ndarray:
+        self.x_shape = x.shape
+        B, C, H, W = self.x_shape
+        H_out = (H + 2 * self.padding_length - self.Kh) // self.stride + 1
+        W_out = (W + 2 * self.padding_length - self.Kw) // self.stride + 1
+        
+        # [B * H_out * W_out, C * Kh * Kw]に変換
+        col = self.im2col(x)
+        
+        # パッチ内の各チャンネルごとに独立して最大値を取るためにリシェイプ
+        # [B * H_out * W_out * C, Kh * Kw]
+        col = col.reshape(-1, self.Kh * self.Kw)
+        
+        # 逆伝播のために最大値のインデックスを記憶
+        self.arg_max = np.argmax(col, axis=1)
+        
+        # 横方向(Kh * Kw)に対して最大値を取得: [B * H_out * W_out * C]
+        out_col = np.max(col, axis=1)
+        
+        # 元の特徴マップの形状に戻す: [B, C, H_out, W_out]
+        out = out_col.reshape(B, H_out, W_out, C).transpose(0, 3, 1, 2)
+        
+        return out
+
+
+    def backward_propagation(self, dout: np.ndarray) -> np.ndarray:
+        _, C, _, _ = self.x_shape
+        
+        # 順伝播の `out_col` と同じ1次元形状に平坦化する
+        # [B, C, H_out, W_out] -> [B, H_out, W_out, C] -> 1次元
+        dout_flat = dout.transpose(0, 2, 3, 1).flatten()
+        
+        # [B * H_out * W_out * C, Kh * Kw]
+        dx_col = np.zeros((dout_flat.size, self.Kh * self.Kw))
+        
+        # 最大値のインデックスの位置にだけ上流からの勾配を配置する
+        # (np.arange で行を指定し、self.arg_max で列を指定して代入)
+        dx_col[np.arange(self.arg_max.size), self.arg_max] = dout_flat
+        
+        # col2imの入力形状に戻す: [B * H_out * W_out, C * Kh * Kw]
+        dx_col = dx_col.reshape(-1, C * self.Kh * self.Kw)
+        
+        # col2imでパッチを元の画像座標に集約する
+        dx = self.col2im(dx_col)
+        
+        return dx
