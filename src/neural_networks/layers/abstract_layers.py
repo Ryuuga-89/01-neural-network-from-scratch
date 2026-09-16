@@ -39,6 +39,7 @@ class ParametricLayer(Layer):
     "weight_init_method": {
         "method_name": 初期化方法("Standard" / "Xavier" / "He")
         "distribution": 初期化に用いる分布("normal" / "uniform")
+        "seed": 乱数生成のためのシード値
         "sigma": [初期化方法がStandardで分布がnormalの場合のみ]標準偏差
         "r": [初期化方法がStandardで分布がuniformの場合のみ]一様分布の範囲
         }
@@ -107,6 +108,7 @@ class ParametricLayer(Layer):
         
         init_name: str = self.args["weight_init_method"]["method_name"]
         distribution: str = self.args["weight_init_method"]["distribution"]
+        seed: int = self.args["weight_init_method"]["seed"]
         
         # 書いてから気づいたがもっといい実装があった。アルゴリズムはこっちの方がわかりやすいと思うのでこのままにする。
         if init_name == "Standard":
@@ -142,7 +144,7 @@ class ParametricLayer(Layer):
         else:
             raise ParameterInitializeMethodError("Wの初期化方法がStandard / Xavier / Heのどれでもない")
         
-        rng = np.random.default_rng(seed=42)
+        rng = np.random.default_rng(seed=seed)
         if distribution == "normal": return rng.normal(loc=mean, scale=sigma**2, size=self.shape)
         elif distribution == "uniform": return rng.uniform(low=low, high=high, size=self.shape)
         else: raise ParameterInitializeMethodError("通常ありえない箇所でのエラー")
