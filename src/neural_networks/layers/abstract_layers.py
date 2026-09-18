@@ -145,7 +145,7 @@ class ParametricLayer(Layer):
             raise ParameterInitializeMethodError("Wの初期化方法がStandard / Xavier / Heのどれでもない")
         
         rng = np.random.default_rng(seed=seed)
-        if distribution == "normal": return rng.normal(loc=mean, scale=sigma**2, size=self.shape)
+        if distribution == "normal": return rng.normal(loc=mean, scale=sigma, size=self.shape)
         elif distribution == "uniform": return rng.uniform(low=low, high=high, size=self.shape)
         else: raise ParameterInitializeMethodError("通常ありえない箇所でのエラー")
 
