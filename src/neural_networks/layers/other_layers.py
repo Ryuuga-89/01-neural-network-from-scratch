@@ -262,3 +262,12 @@ class Sequential(Layer):
         self.train = False
         for layer in self.layers:
             layer.train = False
+            
+            
+    def get_params(self) -> list[tuple]:
+        params = []
+        
+        for layer in self.layers:
+            params.append(layer.get_params())
+            
+        return params
