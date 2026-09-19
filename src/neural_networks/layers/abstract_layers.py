@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from math import sqrt
+from typing import override
 
 import numpy as np
 
@@ -22,7 +23,10 @@ class Layer(ABC):
     @abstractmethod
     def backward_propagation(self, dout: np.ndarray) -> np.ndarray: ...
     
-    
+    # Optimizerに更新対象のパラメータを渡すためのメソッド
+    # 基本は空のリストを返し、更新対象パラメータがある場合はオーバーライドする
+    def get_params(self) -> list[tuple]:
+        return []
     
 class ParametricLayer(Layer):
     """
@@ -158,3 +162,8 @@ class ParametricLayer(Layer):
 
         else:
             raise ParameterInitializeMethodError("bの初期化方法がZerosではない")
+        
+    
+    @override
+    def get_params(self) -> list[tuple]:
+        return [(self, "W", "dW"), (self, "b", "db")]

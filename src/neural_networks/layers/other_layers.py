@@ -1,3 +1,5 @@
+from typing import override
+
 import numpy as np
 
 from src.neural_networks.layers.abstract_layers import Layer
@@ -204,6 +206,10 @@ class BatchNormalization(Layer):
         
         return dx
     
+    
+    @override
+    def get_params(self) -> list[tuple]:
+        return [(self, "gemma", "dgemma"), (self, "beta", "dbeta")]
     
 class Sequential(Layer):
     """
