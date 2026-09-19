@@ -217,12 +217,13 @@ class Sequential(Layer):
     全てのモデルはSequentialを用いて定義されるものとする
     """
     layers: list[Layer]
+    _train: bool # trainのsetter/getterを変えるのでその代わりに別の変数を利用している
     
     
     def __init__(self, layers: list[Layer]):
-        super().__init__()
-        
         self.layers = layers
+        self._train = True
+        super().__init__()
         
         
     def forward_propagation(self, x: np.ndarray) -> np.ndarray:
@@ -246,22 +247,16 @@ class Sequential(Layer):
         return dout
     
     
-    def to_train(self) -> None:
-        """
-        全ての層のtrainプロパティをtrueにする
-        """
-        self.train = True
-        for layer in self.layers:
-            layer.train = True
-            
+    @property
+    def train(self) -> bool:
+        return self._train
     
-    def to_infer(self) -> None:
-        """
-        全ての層のtrainプロパティをfalseにする
-        """
-        self.train = False
+    
+    @train.setter
+    def train(self, mode: bool) -> None:
+        self._train = mode
         for layer in self.layers:
-            layer.train = False
+            layer.train = mode
             
             
     @override
@@ -269,6 +264,6 @@ class Sequential(Layer):
         params = []
         
         for layer in self.layers:
-            params.append(layer.get_params())
+            params.extend(layer.get_params())
             
         return params
