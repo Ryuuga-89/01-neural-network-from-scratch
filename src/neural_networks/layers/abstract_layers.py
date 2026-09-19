@@ -25,7 +25,7 @@ class Layer(ABC):
     
     # Optimizerに更新対象のパラメータを渡すためのメソッド
     # 基本は空のリストを返し、更新対象パラメータがある場合はオーバーライドする
-    def get_params(self) -> list[tuple]:
+    def get_params(self) -> list[tuple[object, str, str]]:
         return []
     
 class ParametricLayer(Layer):
@@ -165,5 +165,5 @@ class ParametricLayer(Layer):
         
     
     @override
-    def get_params(self) -> list[tuple]:
+    def get_params(self) -> list[tuple[object, str, str]]:
         return [(self, "W", "dW"), (self, "b", "db")]

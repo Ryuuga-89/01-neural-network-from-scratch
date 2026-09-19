@@ -208,7 +208,7 @@ class BatchNormalization(Layer):
     
     
     @override
-    def get_params(self) -> list[tuple]:
+    def get_params(self) -> list[tuple[object, str, str]]:
         return [(self, "gemma", "dgemma"), (self, "beta", "dbeta")]
     
 class Sequential(Layer):
@@ -264,7 +264,8 @@ class Sequential(Layer):
             layer.train = False
             
             
-    def get_params(self) -> list[tuple]:
+    @override
+    def get_params(self) -> list[tuple[object, str, str]]:
         params = []
         
         for layer in self.layers:
