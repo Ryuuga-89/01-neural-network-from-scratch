@@ -69,7 +69,7 @@ class CrossEntropyLoss(LossFunction):
         self.t = t
         batch_size = output.shape[0] if output.ndim > 1 else 1
 
-        # 数値安定な Softmax の計算 (行方向の最大値を減算)
+        # 数値安定な Softmax の計算(行方向の最大値を減算)
         if output.ndim == 2:
             x_max = np.max(output, axis=1, keepdims=True)
             exp_x = np.exp(output - x_max)
@@ -114,7 +114,7 @@ class BCEWithLogitsLoss(LossFunction):
 
 
     def forward_propagation(self, output: np.ndarray, t: np.ndarray) -> float:
-        assert output.shape == t.shape, f"Shape mismatch: {output.shape} vs {t.shape}"
+        assert output.shape == t.shape, f"形状: {output.shape} vs {t.shape}"
         self.output = output
         self.t = t
         batch_size = output.shape[0] if output.ndim > 1 else 1
