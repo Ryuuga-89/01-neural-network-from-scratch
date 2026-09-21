@@ -35,22 +35,28 @@ class Trainer:
 
     def train_epoch(self) -> float:
         self.model.train = True
+
         total_loss = 0.0
+        total_samples = 0
 
         for x_batch, t_batch in self.train_loader:
             # 順伝播
             out = self.model.forward_propagation(x_batch)
             loss = self.loss_function.forward_propagation(out, t_batch)
-            total_loss += loss
+
+            batch_size = len(x_batch)
+
+            total_loss += loss * batch_size
+            total_samples += batch_size
 
             # 逆伝播
             dout = self.loss_function.backward_propagation(dout=1.0)
             self.model.backward_propagation(dout)
 
-            # パラメータ更新(内部でupdate()->zero_grad())
+            # パラメータ更新
             self.optimizer.step()
 
-        return total_loss / len(self.train_loader)
+        return total_loss / total_samples
 
 
     def evaluate(self) -> float:
@@ -58,14 +64,20 @@ class Trainer:
             return 0.0
 
         self.model.train = False
+
         total_loss = 0.0
+        total_samples = 0
 
         for x_batch, t_batch in self.val_loader:
             out = self.model.forward_propagation(x_batch)
             loss = self.loss_function.forward_propagation(out, t_batch)
-            total_loss += loss
 
-        return total_loss / len(self.val_loader)
+            batch_size = len(x_batch)
+
+            total_loss += loss * batch_size
+            total_samples += batch_size
+
+        return total_loss / total_samples
 
 
     def fit(self, epochs: int) -> dict[str, list[float]]:
