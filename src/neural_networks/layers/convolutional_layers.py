@@ -52,8 +52,8 @@ class Conv2D(ParametricLayer):
     
     
     def __init__(self, shape: tuple, args: dict):
+        self.C_out, self.C_in, self.Kh, self.Kw = shape
         super().__init__(shape, args)
-        self.C_out, self.C_in, self.Kh, self.Kw = self.shape
         self.stride = self.args["Conv2D"]["stride"]
         self.padding_mode = self.args["Conv2D"]["padding_mode"]
         self.padding_length = self.args["Conv2D"]["padding_length"]
