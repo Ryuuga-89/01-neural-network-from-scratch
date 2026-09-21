@@ -110,7 +110,7 @@ class Sigmoid(Layer):
         
     
     def forward_propagation(self, x: np.ndarray) -> np.ndarray:
-        self.out = 1.0 / (1.0 + np.exp(x))
+        self.out = 1.0 / (1.0 + np.exp(- x))
         return self.out
     
     
