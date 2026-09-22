@@ -5,6 +5,72 @@ import numpy as np
 from src.neural_networks.layers.abstract_layers import Layer, ParametricLayer
 
 
+def padding_backward(dout_padded: np.ndarray, x_shape: tuple, padding_mode: str, padding_length: int) -> np.ndarray:
+    """
+    padding操作に対する逆伝播を行う。
+
+    dout_padded: padding後のテンソルに対する勾配。shape = [B, C, H + 2P, W + 2P]
+
+    x_shape: padding前の入力shape [B, C, H, W]
+
+    Returns: padding前の入力に対する勾配 [B, C, H, W]
+    """
+    B, C, H, W = x_shape
+    p = padding_length
+
+    if p == 0:
+        return dout_padded
+
+    # Zero paddingの場合、padding部分は入力xに依存しないため
+    # 中央部分だけを取り出せばよい
+    if padding_mode == "Zeros":
+        return dout_padded[
+            :,
+            :,
+            p:p + H,
+            p:p + W,
+        ]
+
+    PADDING_MODE_TO_NP_PAD: dict = {
+        "Edge": "edge",
+        "Reflect": "reflect",
+        "Symmetric": "symmetric",
+    }
+
+    np_mode: Literal["edge", "reflect", "symmetric"] = PADDING_MODE_TO_NP_PAD[padding_mode]
+
+    # 元画像の各pixelに一意なIDを割り当てる
+    #
+    # 例:
+    # [[0, 1],
+    #  [2, 3]]
+    source_indices = np.arange(
+        H * W,
+        dtype=np.intp,
+    ).reshape(H, W)
+
+    # forward時と同じpaddingをindexに適用することで、padding後の各pixelが元画像のどこから来たのかを求める
+    source_map = np.pad(
+        source_indices,
+        pad_width=((p, p), (p, p)),
+        mode=np_mode,
+    )
+
+    source_flat = source_map.ravel()
+
+    # [B, C, H * W]
+    dx = np.zeros(
+        (B, C, H * W),
+        dtype=dout_padded.dtype,
+    )
+
+    # 同じ元pixelを参照しているpadding位置のgradientをnp.add.atによってすべて加算する
+    for b in range(B):
+        for c in range(C):
+            np.add.at(dx[b, c], source_flat, dout_padded[b, c].ravel())
+
+    return dx.reshape(B, C, H, W)
+
 class Conv2D(ParametricLayer):
     """
     二次元畳み込み層
@@ -112,12 +178,12 @@ class Conv2D(ParametricLayer):
                 j_max = j + self.stride * W_out
                 im_padded[:, :, i:i_max:self.stride, j:j_max:self.stride] += col[:, :, i, j, :, :]
                 
-        if self.padding_length == 0:
-            im = im_padded
-        else:
-            im = im_padded[:, :, self.padding_length:-self.padding_length, self.padding_length:-self.padding_length]
-        
-        return im
+        return padding_backward(
+            dout_padded=im_padded,
+            x_shape=self.x_shape,
+            padding_mode=self.padding_mode,
+            padding_length=self.padding_length,
+        )
         
     def forward_propagation(self, x: np.ndarray) -> np.ndarray:
         self.x_shape = x.shape
@@ -251,12 +317,12 @@ class MaxPooling2D(Layer):
                 j_max = j + self.stride * W_out
                 im_padded[:, :, i:i_max:self.stride, j:j_max:self.stride] += col[:, :, i, j, :, :]
                 
-        if self.padding_length == 0:
-            im = im_padded
-        else:
-            im = im_padded[:, :, self.padding_length:-self.padding_length, self.padding_length:-self.padding_length]
-        
-        return im
+        return padding_backward(
+            dout_padded=im_padded,
+            x_shape=self.x_shape,
+            padding_mode=self.padding_mode,
+            padding_length=self.padding_length,
+        )
 
 
     def forward_propagation(self, x: np.ndarray) -> np.ndarray:
