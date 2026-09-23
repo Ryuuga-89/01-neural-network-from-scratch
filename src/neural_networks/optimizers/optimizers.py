@@ -125,14 +125,7 @@ class Adam(Optimizer):
     m: list[np.ndarray]
     v: list[np.ndarray]
 
-    def __init__(
-        self,
-        layer: Layer,
-        lr: float = 0.001,
-        beta1: float = 0.9,
-        beta2: float = 0.999,
-        eps: float = 1e-8,
-    ):
+    def __init__(self, layer: Layer, lr: float = 0.001, beta1: float = 0.9, beta2: float = 0.999, eps: float = 1e-8):
         super().__init__(layer, lr)
         self.beta1 = beta1
         self.beta2 = beta2
@@ -151,8 +144,6 @@ class Adam(Optimizer):
 
     def update(self) -> None:
         self.iter += 1
-        # バイアス補正を学習率側に取り込む(計算効率化)
-        lr_t = self.lr * np.sqrt(1.0 - self.beta2 ** self.iter) / (1.0 - self.beta1 ** self.iter)
 
         for idx, (layer, param_name, grad_name) in enumerate(self.params):
             grad = getattr(layer, grad_name, None)
@@ -161,9 +152,10 @@ class Adam(Optimizer):
 
             param = getattr(layer, param_name)
 
-            # モーメントの指数移動平均を更新
-            self.m[idx] += (1.0 - self.beta1) * (grad - self.m[idx])
-            self.v[idx] += (1.0 - self.beta2) * (grad * grad - self.v[idx])
+            self.m[idx] = self.beta1 * self.m[idx] + (1.0 - self.beta1) * grad
+            self.v[idx] = self.beta2 * self.v[idx] + (1.0 - self.beta2) * grad ** 2
 
-            # パラメータのインプレース更新
-            param -= lr_t * self.m[idx] / (np.sqrt(self.v[idx]) + self.eps)
+            m_hat = self.m[idx] / (1.0 - self.beta1 ** self.iter)
+            v_hat = self.v[idx] / (1.0 - self.beta2 ** self.iter)
+
+            param -= self.lr * m_hat / (np.sqrt(v_hat) + self.eps)
