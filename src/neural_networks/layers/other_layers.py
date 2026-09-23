@@ -209,7 +209,7 @@ class BatchNormalization(Layer):
     
     @override
     def get_params(self) -> list[tuple[object, str, str]]:
-        return [(self, "gemma", "dgemma"), (self, "beta", "dbeta")]
+        return [(self, "gamma", "dgamma"), (self, "beta", "dbeta")]
     
 class Sequential(Layer):
     """
