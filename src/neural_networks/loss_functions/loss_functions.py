@@ -114,17 +114,23 @@ class BCEWithLogitsLoss(LossFunction):
 
 
     def forward_propagation(self, output: np.ndarray, t: np.ndarray) -> float:
-        assert output.shape == t.shape, f"形状: {output.shape} vs {t.shape}"
+        if output.shape != t.shape:
+            raise ValueError("予測値と期待値の形状が異なります。")
         self.output = output
         self.t = t
         batch_size = output.shape[0] if output.ndim > 1 else 1
 
-        # 安定なSigmoid: 1 / (1 + exp(-x))
-        self.sig_out = np.where(
-            output >= 0,
-            1.0 / (1.0 + np.exp(-output)),
-            np.exp(output) / (1.0 + np.exp(output))
-        )
+        # 安定なSigmoid: 正負を別々で計算する
+        self.sig_out = np.empty_like(output, dtype=float)
+
+        positive = output >= 0
+        negative = ~positive
+
+        self.sig_out[positive] = (1.0 / (1.0 + np.exp(-output[positive])))
+
+        exp_x = np.exp(output[negative])
+
+        self.sig_out[negative] = (exp_x / (1.0 + exp_x))
 
         # 安定なBCE計算: max(x, 0) - x * t + log(1 + exp(-|x|))
         loss_matrix = np.maximum(output, 0) - output * t + np.log(1.0 + np.exp(-np.abs(output)))
