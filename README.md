@@ -1,129 +1,101 @@
 # Neural Networks from Scratch
 
-NumPyを用いて、ニューラルネットワークの主要な構成要素をゼロから実装するプロジェクト。
+NumPyを用いて、ニューラルネットワークの主要な構成要素をゼロから実装する学習プロジェクト。
 
-本プロジェクトの目的は、ニューラルネットワークを高水準ライブラリから利用することではなく、forward propagation、backpropagation、optimization、convolutionなどの計算を自ら実装し、その動作を数値的に検証することで、深層学習の基礎原理を理解することである。
+本プロジェクトの目的は、ニューラルネットワークを高水準ライブラリから利用することではなく、各コンポーネントの内部で行われている計算を理解し、自ら実装することで、ニューラルネットワークの動作原理をコードレベルで理解することである。
 
-本プロジェクトは『ゼロから作るDeep Learning』第1巻の学習テーマに対応するが、書籍および公式リポジトリのコードは使用しない。
+特に、
+
+- 順伝播
+- 逆伝播
+- パラメータ更新
+- CNN系レイヤ
+- 正規化
+
+といった処理について、数式上の理解と実装を対応付けることを重視している。
+
+本プロジェクトは『ゼロから作るDeep Learning』第1巻の学習テーマを参考にしているが、書籍および公式リポジトリのコードは使用していない。
 
 ## Goals
 
-本プロジェクトでは、以下の能力を身につけることを目標とする。
+本プロジェクトでは、ニューラルネットワークを構成する主要なコンポーネントについて、
 
-* ニューラルネットワークのforward propagationを数式とコードの両方で説明できる
-* back propagationを導出し、自力で実装できる
-* 各パラメータに対する勾配を数値的に検証できる
-* SGDをはじめとする主要なoptimizerを実装できる
-* weight initialization、Batch Normalization、Dropoutが学習に与える影響を説明できる
-* convolutionおよびpoolingを実装し、CNNを構築できる
-* 学習・評価・比較実験を再現可能な形で実行できる
-* 実装が正しいことをテストと数値実験によって確認できる
+1. 内部で行われている計算を理解する
+2. NumPyを用いて自力で実装する
+3. forward / backwardの挙動をテストによって検証する
+4. 各コンポーネントを組み合わせてMLPおよびCNNを構築する
+5. 実際に学習可能であることを小規模な実験によって確認する
 
-## Rules
+ことを目標とする。
 
-本リポジトリには、本学習プロジェクト共通の `GLOBAL-RULES.md` を適用する。
+ライブラリとしての機能性や実用的な学習性能を追求することではなく、ニューラルネットワークの各構成要素を理解することを主眼としている。
 
-特に、以下を遵守する。
-
-* 書籍・外部サイト・既存リポジトリからコードを転記しない
-* AIエージェントおよび生成AIを実装・設計・デバッグに使用しない
-* `.ipynb` を使用しない
-* 中核アルゴリズムを実装済みの高水準ライブラリに委譲しない
-* 全ての主要実装に対して適切なテストを作成する
-* 実験はCLIから再現可能にする
-* 乱数を明示的に制御する
-
-## Scope
-
-### Numerical Backend
+## Implementation Policy
 
 数値計算の基盤としてNumPyを使用する。
 
 NumPyには以下のような低水準の数値処理を任せる。
 
-* 配列の生成・保持
-* 行列積
-* element-wise演算
-* reduction
-* reshape / transpose
-* 乱数生成
-* 基本的な線形代数演算
+- 配列の生成・保持
+- 行列積
+- element-wise演算
+- reduction
+- reshape / transpose
+- 乱数生成
+- 基本的な線形代数演算
 
 一方、ニューラルネットワーク固有の処理は自力で実装する。
 
-PyTorch、TensorFlow、JAX等のdeep learning frameworkは、モデル実装・学習には使用しない。
+PyTorch、TensorFlow、JAX等のDeep Learning Frameworkは、ニューラルネットワーク本体の実装および学習には使用しない。
 
-## Required Implementation
+コアとなるニューラルネットワーク実装は、自身でアルゴリズムを理解した上で実装している。
 
-### Basic Layers
+テストについては、実装の検証を目的としてAIを利用したテストケースの設計・レビューも行っている。
 
-以下のlayerを実装する。
+## Implemented Components
 
-* `Linear`
-* `ReLU`
-* `Sigmoid`
-* `Flatten`
+### Layers
 
-各layerは少なくとも以下の処理を持つ。
+[`src/neural_networks/layers/`](src/neural_networks/layers)
+
+#### Basic Layers
+
+[`basic_layers.py`](src/neural_networks/layers/basic_layers.py)
+
+- `Linear`
+- `ReLU`
+- `Sigmoid`
+- `Flatten`
+
+各layerは基本的に、
 
 ```python
-forward(x)
-backward(grad_output)
+forward_propagation(x)
+backward_propagation(dout)
 ```
 
-### Loss Functions
+を持ち、順伝播と逆伝播の双方を実装している。
 
-以下を実装する。
+#### Convolutional Layers
 
-* Mean Squared Error
-* Softmax
-* Cross Entropy Loss
-* Softmax Cross Entropy Loss
+[`convolutional_layers.py`](src/neural_networks/layers/convolutional_layers.py)
 
-数値安定性を考慮した実装とする。
+- `Conv2D`
+- `MaxPooling2D`
 
-### Optimization
+`Conv2D`ではstrideやpaddingを含む二次元畳み込みを扱う。
 
-以下のoptimizerを実装する。
+`MaxPooling2D`ではpooling window内の最大値の選択と、それに対応する逆伝播を実装している。
 
-* SGD
-* Momentum
-* AdaGrad
-* Adam
+#### Other Layers
 
-optimizerとmodel parameterの管理を分離する。
+[`other_layers.py`](src/neural_networks/layers/other_layers.py)
 
-### Weight Initialization
+- `Dropout`
+- `BatchNormalization`
+- `Sequential`
 
-以下の初期化方式を実装する。
-
-* Standard random initialization
-* Xavier initialization
-* He initialization
-
-### Regularization and Training Techniques
-
-以下を実装する。
-
-* Dropout
-* Batch Normalization
-
-training modeとevaluation modeの挙動を適切に分離する。
-
-### Convolutional Neural Networks
-
-以下を実装する。
-
-* `Conv2D`
-* `MaxPool2D`
-
-少なくともstrideおよびpaddingを扱えるようにする。
-
-これらを利用してCNNを構築する。
-
-### Model Abstraction
-
-layerを組み合わせてネットワークを構築できる最小限の仕組みを実装する。
+`Sequential`によって複数のlayerを組み合わせ、MLPやCNNを構築できる。
 
 例：
 
@@ -135,280 +107,298 @@ model = Sequential(
 )
 ```
 
-ただし、API設計は実装過程で必要に応じて変更してよい。
+### Loss Functions
 
-### Training Infrastructure
+[`src/neural_networks/loss_functions/loss_functions.py`](src/neural_networks/loss_functions/loss_functions.py)
 
-以下を実装する。
+以下の損失関数を実装している。
 
-* mini-batch training
-* training loop
-* validation loop
-* metric calculation
-* parameter update
-* checkpoint saving/loading
-* reproducible seeding
+- `MeanSquaredErrorLoss`
+- `CrossEntropyLoss`
+- `BCEWithLogitsLoss`
+
+forwardで損失を計算するとともに、backwardで入力に対する勾配を計算する。
+
+数値計算上問題となる箇所については、可能な範囲で数値安定性を考慮して実装している。
+
+### Optimizers
+
+[`src/neural_networks/optimizers/optimizers.py`](src/neural_networks/optimizers/optimizers.py)
+
+以下の最適化アルゴリズムを実装している。
+
+- `SGD`
+- `Momentum`
+- `AdaGrad`
+- `Adam`
+
+各optimizerでは、modelが保持するparameterおよびgradientを用いてparameter updateを行う。
+
+特にAdamについては、
+
+- first moment
+- second moment
+- bias correction
+
+を含む更新則を実装している。
+
+### DataLoader
+
+[`src/neural_networks/data_loader/data_loader.py`](src/neural_networks/data_loader/data_loader.py)
+
+- `DataLoader`
+
+datasetからmini-batchを生成し、ニューラルネットワークの学習に利用する。
+
+### Trainer
+
+[`src/neural_networks/trainer/trainer.py`](src/neural_networks/trainer/trainer.py)
+
+- `Trainer`
+
+model、loss function、optimizer、DataLoaderを組み合わせて学習を実行するための処理をまとめている。
+
+基本的なtraining loopをニューラルネットワーク本体の実装から分離するためのコンポーネントである。
 
 ## Verification
 
-本プロジェクトでは、モデルのaccuracyだけを実装の正しさの根拠としない。
+本プロジェクトでは、単にdataset上でaccuracyが得られることだけを実装の正しさの根拠とはしない。
 
-### Gradient Checking
+各コンポーネントについて、[`tests/`](tests) 以下にテストを作成している。
 
-backpropagationによって得られた解析的勾配を、有限差分による数値微分と比較する。
+テストでは主に以下を確認する。
 
-中央差分
+### Forward Tests
 
-$$
-\frac{f(\theta+\epsilon)-f(\theta-\epsilon)}{2\epsilon}
-$$
+既知の入力に対して、順伝播の結果が期待値と一致することを確認する。
 
-を利用し、relative errorを計算する。
+特に単純な入力については、手計算または独立した参照計算と比較する。
 
-少なくとも以下についてgradient checkを実施する。
+### Backward Tests
 
-* `Linear`
-* activation functions
-* loss functions
-* `BatchNorm`
-* `Conv2D`
+各layerについて、逆伝播によって得られるgradientが期待する値と一致することを確認する。
 
-必要に応じてその他のlayerについても実施する。
+parameterを持つlayerでは、
 
-### Known-value Tests
+- input gradient
+- weight gradient
+- bias gradient
 
-手計算可能な小さな入力を用意し、forwardおよびbackwardの結果が期待値と一致することを確認する。
+などをそれぞれ検証する。
 
 ### Shape Tests
 
-各layerについて、入力shapeに対して期待する出力shapeおよびgradient shapeが得られることを確認する。
+入力shapeに対して、forward / backwardの双方で期待するshapeが維持されることを確認する。
 
-特に以下を重点的に確認する。
+特に、
 
-* batch dimension
-* convolution
-* padding
-* stride
-* pooling
+- batch dimension
+- multi-channel input
+- convolution kernel
+- stride
+- padding
+- pooling
 
-### Tiny Dataset Overfitting
+などを含むケースを検証する。
 
-少数のtraining samplesのみを使用し、十分なmodel capacityを持つネットワークがほぼ完全にoverfitできることを確認する。
+### Edge Cases
 
-この実験によって、training pipeline全体が正常に動作していることを検証する。
+通常ケースだけでなく、実装上問題になりやすい境界条件についてもテストする。
 
-### Serialization Test
+例えばconvolution / poolingでは、
 
-modelを保存・再読み込みした後、同じ入力に対して同じ出力が得られることを確認する。
+- rectangular kernel
+- different strides
+- different padding modes
+- overlapping regions
+- multi-channel inputs
+
+などについて検証する。
+
+### Reference Comparison
+
+必要に応じて、PyTorch等の既存実装をテスト上の参照値として利用する。
+
+これはニューラルネットワーク本体の処理をframeworkに委譲するためではなく、自作実装の数値的な正しさを検証するためにのみ使用する。
 
 ## Experiments
 
-### Experiment 1: Optimizer Comparison
+本プロジェクトでは、optimizerやarchitectureの性能比較を主目的とした大規模な実験は行わない。
 
-以下を同一条件で比較する。
+実験の目的は、
 
-* SGD
-* Momentum
-* AdaGrad
-* Adam
+> 実装したコンポーネントを組み合わせたニューラルネットワークが、実際に正常に学習できるか
 
-比較対象：
+を確認することである。
 
-* training loss
-* validation loss
-* convergence speed
-* final validation accuracy
+実験コードは [`experiments/`](experiments) 以下に配置する。
 
-### Experiment 2: Weight Initialization
+### MLP Overfitting Test
 
-以下を比較する。
+実装した、
 
-* standard random initialization
-* Xavier initialization
-* He initialization
+- `Linear`
+- activation function
+- loss function
+- optimizer
+- `DataLoader`
+- `Trainer`
 
-各層におけるactivationおよびgradientの分布も必要に応じて計測する。
+などを組み合わせてMLPを構築する。
 
-### Experiment 3: Batch Normalization
+小規模なdatasetまたはdataset subsetについて学習を行い、十分なmodel capacityを与えたときにtraining dataへoverfitできることを確認する。
 
-Batch Normalizationの有無を比較する。
+これによって、
 
-評価する項目：
-
-* convergence
-* training stability
-* validation performance
-* activation distribution
-
-### Experiment 4: Dropout
-
-Dropoutの有無、および複数のdropout probabilityを比較する。
-
-training performanceとgeneralizationの関係を分析する。
-
-### Experiment 5: MLP vs CNN
-
-同一の画像分類datasetについて、
-
-* Multi-Layer Perceptron
-* Convolutional Neural Network
-
-を比較する。
-
-単純な最終accuracyだけでなく、parameter数、学習時間、学習曲線も比較する。
-
-## Dataset
-
-最終評価には、MNISTまたはFashion-MNIST相当の画像分類datasetを使用する。
-
-dataset取得および前処理処理は、中核となるニューラルネットワーク実装とは分離する。
-
-データ分割はtraining / validation / testを明確に区別し、test setをモデル選択に使用しない。
-
-## Reproducibility
-
-全ての実験で乱数seedを明示的に指定可能にする。
-
-例：
-
-```bash
-uv run python -m experiments.compare_optimizers --seed 42
+```text
+DataLoader
+    ↓
+Model
+    ↓
+Loss
+    ↓
+Backward
+    ↓
+Optimizer
 ```
 
-複数seedを使用する実験では、使用したseed集合を実験設定として保存する。
+というMLPのtraining pipeline全体が正常に動作していることを確認する。
 
-実験結果とグラフはコードから生成し、手作業による数値変更を行わない。
+### CNN Overfitting Test
+
+実装した、
+
+- `Conv2D`
+- activation function
+- `MaxPooling2D`
+- `Flatten`
+- `Linear`
+
+などを組み合わせてCNNを構築する。
+
+MLPと同様に小規模なdatasetについて学習し、training dataへ十分にoverfitできることを確認する。
+
+これによって、convolutionおよびpoolingを含むCNNのforward / backward処理が、training pipeline全体として正常に機能していることを確認する。
 
 ## Project Structure
 
-想定するディレクトリ構成：
+主要なディレクトリ構成は以下の通り。
 
 ```text
 .
 ├── src/
 │   └── neural_networks/
 │       ├── layers/
-│       ├── losses/
+|       |   ├── abstract_layers.py
+│       │   ├── basic_layers.py
+│       │   ├── convolutional_layers.py
+│       │   └── other_layers.py
+│       ├── loss_functions/
+│       │   └── loss_functions.py
 │       ├── optimizers/
-│       ├── initializers/
-│       ├── models/
-│       ├── training/
-│       └── utils/
+│       │   └── optimizers.py
+│       ├── data_loader/
+│       │   └── data_loader.py
+│       └── trainer/
+│           └── trainer.py
 ├── tests/
 ├── experiments/
-├── scripts/
-├── configs/
-├── assets/
-│   └── figures/
-├── reports/
-│   └── technical_report.md
-├── GLOBAL-RULES.md
+├── docs/
+│   ├── implementation_note/
+|   └── report/
 ├── README.md
 ├── pyproject.toml
 └── uv.lock
 ```
 
-ディレクトリ構成は実装の進行に応じて変更する可能性がある。
+`src/`にはニューラルネットワーク本体の実装を配置する。
 
-## CLI
+`tests/`には各コンポーネントの単体テストおよび結合的なテストを配置する。
 
-最終的に主要な処理をCLIから実行できる状態にする。
+`experiments/`にはMLPおよびCNNが実際に学習可能であることを確認するための小規模な実験を配置する。
 
-想定例：
+実装中に得られた設計上の知見や判断については、必要に応じて`docs/implementation_philosophy/`以下に記録する。
+
+## Usage
+
+依存関係のインストール：
 
 ```bash
-# Install dependencies
 uv sync
-
-# Run tests
-uv run pytest
-
-# Train MLP
-uv run python -m experiments.train_mlp
-
-# Train CNN
-uv run python -m experiments.train_cnn
-
-# Compare optimizers
-uv run python -m experiments.compare_optimizers
-
-# Compare initialization methods
-uv run python -m experiments.compare_initialization
-
-# Evaluate Batch Normalization
-uv run python -m experiments.batchnorm
-
-# Evaluate Dropout
-uv run python -m experiments.dropout
-
-# Compare MLP and CNN
-uv run python -m experiments.compare_architectures
 ```
 
-具体的なCLIは実装後に確定する。
+テストの実行：
 
-## Technical Report
+```bash
+uv run pytest
+```
 
-`reports/technical_report.md` に、本プロジェクトで学習・実装・検証した内容をまとめる。
+MLP / CNNの学習実験については、`experiments/`以下のスクリプトから実行する。
 
-少なくとも以下を含める。
+例としては
 
-1. Neural Networks
-2. Forward Propagation
-3. Loss Functions
-4. Backpropagation
-5. Gradient Checking
-6. Optimization Algorithms
-7. Weight Initialization
-8. Batch Normalization
-9. Dropout
-10. Convolutional Neural Networks
-11. Verification Methodology
-12. Experimental Setup
-13. Results
-14. Discussion
-15. Limitations
+```bash
+uv run python -m experiments.03_CNN-MulticlassClassification.main
+```
 
-READMEはプロジェクト全体の概要と主要成果を示し、詳細な理論・実験考察はTechnical Reportに記載する。
+## Scope
+
+本プロジェクトで重視するのは、
+
+- ニューラルネットワークの各コンポーネントの理解
+- forward / backwardの実装
+- 数値計算の詳細の理解
+- テストによる自作実装の検証
+- 各コンポーネントを組み合わせたMLP / CNNの構築
+
+である。
+
+一方、以下は本プロジェクトの主要な対象とはしない。
+
+- optimizer間の詳細なbenchmark
+- hyperparameter tuning
+- MLPとCNNの性能比較
+- 大規模datasetでのtraining
+- GPUによる高速化
+- automatic differentiation
+- production向けDeep Learning Frameworkとしての機能性
+- 詳細な実験レポートの作成
+
+これらの機能を追加することよりも、ニューラルネットワーク内部の計算を理解し、それを自力で実装することを優先する。
 
 ## Completion Criteria
 
-以下を全て満たした時点で本プロジェクトを完了とする。
+本プロジェクトでは、以下を主要な完了条件とする。
 
-* [ ] 全必須layerを実装した
-* [ ] 全必須loss functionを実装した
-* [ ] SGD / Momentum / AdaGrad / Adamを実装した
-* [ ] Xavier / He initializationを実装した
-* [ ] Batch Normalizationを実装した
-* [ ] Dropoutを実装した
-* [ ] Conv2Dを実装した
-* [ ] MaxPool2Dを実装した
-* [ ] MLPを学習できる
-* [ ] CNNを学習できる
-* [ ] 必須gradient checkを通過する
-* [ ] 全自動テストが成功する
-* [ ] Tiny Dataset Overfitting Testを通過する
-* [ ] Optimizer比較実験を完了した
-* [ ] Weight Initialization比較実験を完了した
-* [ ] Batch Normalization比較実験を完了した
-* [ ] Dropout比較実験を完了した
-* [ ] MLP vs CNN比較実験を完了した
-* [ ] 全主要実験をCLIから再現できる
-* [ ] Technical Reportを完成させた
-* [ ] READMEに最終結果を掲載した
-* [ ] `GLOBAL-RULES.md` の全要件を満たしている
-
-全条件を満たした時点で `v1.0.0` をリリースする。
-
-## References
-
-* 斎藤康毅『ゼロから作るDeep Learning ― Pythonで学ぶディープラーニングの理論と実装』
-* 使用した論文・技術資料・公式ドキュメントは、実装およびレポート作成の進行に応じて追記する
+- [x] `Linear`を実装した
+- [x] `ReLU`を実装した
+- [x] `Sigmoid`を実装した
+- [x] `Flatten`を実装した
+- [x] `Conv2D`を実装した
+- [x] `MaxPooling2D`を実装した
+- [x] `Dropout`を実装した
+- [x] `BatchNormalization`を実装した
+- [x] `Sequential`を実装した
+- [x] `MeanSquaredErrorLoss`を実装した
+- [x] `CrossEntropyLoss`を実装した
+- [x] `BCEWithLogitsLoss`を実装した
+- [x] `SGD`を実装した
+- [x] `Momentum`を実装した
+- [x] `AdaGrad`を実装した
+- [x] `Adam`を実装した
+- [x] `DataLoader`を実装した
+- [x] `Trainer`を実装した
+- [x] 各主要コンポーネントに対するテストを作成した
+- [x] MLPが小規模datasetへoverfitできることを確認する
+- [x] CNNが小規模datasetへoverfitできることを確認する
+- [x] 全自動テストが成功することを確認する
 
 ## Status
 
-**Planning / Not yet completed**
+NNの全コーンポーネントの実装、各種実験の実装を完了
 
-本READMEは実装前の仕様を兼ねている。
+## References
 
-実装・実験の進行に伴って、管理しておくべき情報と判断されたものは、`docs/implementation_philosophy`以下に記載していく。
+- 斎藤康毅『ゼロから作るDeep Learning ― Pythonで学ぶディープラーニングの理論と実装』
+- NumPy Documentation
+- 検証時に参照したPyTorch等の公式ドキュメント
