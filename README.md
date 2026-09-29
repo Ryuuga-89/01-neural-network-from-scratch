@@ -317,7 +317,7 @@ MLPと同様に小規模なdatasetについて学習し、training dataへ十分
 
 `experiments/`にはMLPおよびCNNが実際に学習可能であることを確認するための小規模な実験を配置する。
 
-実装中に得られた設計上の知見や判断については、必要に応じて`docs/implementation_philosophy/`以下に記録する。
+実装中に得られた設計上の知見や判断については、必要に応じて`docs/implementation_note/`以下に記録する。
 
 ## Usage
 
@@ -395,7 +395,7 @@ uv run python -m experiments.03_CNN-MulticlassClassification.main
 
 ## Status
 
-NNの全コーンポーネントの実装、各種実験の実装を完了
+NNの全コンポーネントの実装、各種実験の実装を完了
 
 ## References
 

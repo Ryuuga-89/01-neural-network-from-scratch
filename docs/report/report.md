@@ -103,7 +103,7 @@
 
 今回最も難しかったのが、CNN系レイヤーにおけるpaddingである。
 
-[`src/neural_networks/layers/convolutional_layers.py](../../src/neural_networks/layers/convolutional_layers.py)に書かれている。
+[`src/neural_networks/layers/convolutional_layers.py`](../../src/neural_networks/layers/convolutional_layers.py)に書かれている。
 
 順伝播は簡単だったのだが、padding modeで"Zeros"以外を選んだ時の逆伝播の実装が難しかった。単にPaddingを切り捨てていたが、それでは次の点で不十分だった
 * "Symmetric" / "Edge" / "Reflect"を選択した場合、paddingされる値は実際の入力値に依存するので、逆伝播時の勾配計算にも関係してくる
@@ -205,3 +205,5 @@ Layer / ParametricLayerをはじめとして、抽象クラスを定義してか
 
 ニューラルネットワークの各コンポーネントを実装できた。
 実装を通じてNNについて / Pythonについて / 設計について / 数学について 学べたことが数多くあった。時間はかかったが、学びは多かった。
+
+普段はAIコーディングエージェントを通じてコーディングをしていて、手書きのコーディングはかなり久しぶりだったが、設計や保守の重要性について身をもって理解できた。
